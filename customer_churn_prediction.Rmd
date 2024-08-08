@@ -1,0 +1,127 @@
+---
+title:  'XGBoost Algorithm'
+subtitle: 'INFO 523'
+author:
+- name: Student -  [Gayathri Renganathan, Mohit Taparia]
+  affiliation: [iSchool]
+- name: Instructor -  Cristian Román-Palacios
+  affiliation: School of Information, University of Arizona, Tucson, AZ
+tags: [R, RStudio, Final Project - XGBoost Algorithm]
+output: html_document
+
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(caret)
+library(xgboost)
+library(ggplot2)
+library(GGally)
+```
+
+The case study references the Telecom customer churn dataset from the EMPRESS-i on https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset
+
+The read_excel() method loads the dataset stored in the Excel format. 
+
+```{r}
+file_path <- "Data/Customer Churn.csv"
+customerInfo <- read.csv(file_path,  sep = ",", header = TRUE)
+```
+
+
+```{r}
+head(customerInfo,10)
+```
+
+```{r}
+summary(customerInfo)
+```
+
+Checking for null Values
+```{r}
+sum(is.na(customerInfo))
+```
+
+Count of Number of customer who got churned or not
+```{r}
+customerInfo %>% group_by(Churn) %>% summarise(n=n()) %>% arrange(desc(n))
+```
+
+Plotting churn count in the dataset.
+```{r}
+ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
+  geom_bar()+ 
+  labs(fill = "Churn", title = "Churn count plot")
+  
+```
+Observation1: 
+using this Count plot,  target variable is checked for data imbalance  (if there are more number of churn customers than customers who wont churn or vice versa)
+There is some data imbalance, as the number of churn consumers is significantly lower than the number of customers that will not churn
+
+
+Count plot of Age Group to see the distribution of customers across Age
+```{r}
+ggplot(customerInfo, aes(Age.Group, fill = factor(Age.Group))) +
+  geom_bar()+ 
+  labs(fill = "Age Group", title = "Age Group count plot")
+  
+```
+Observation2: 
+There are more customer in the middle age group (2 and 3)
+
+
+Count plot of Age Group to see the distribution of customers across Age
+```{r}
+ggplot(customerInfo, aes(Charge..Amount, fill = factor(Charge..Amount))) +
+  geom_bar()+ 
+  labs(fill = "Charge Amount", title = "Charge Amount count plot")
+  
+```
+Observation3: 
+Charge amount is an ordinal attribute with lowest value being 0 and highest being 9
+The charge amount of 0 has the highest count, and the count decreases with the charge amount.
+
+
+Distribution of Churn count across age group
+```{r}
+customerInfo %>% 
+  ggplot(aes(x = Age.Group, fill = factor(Churn))) + 
+  geom_bar()  
+```
+Observation:
+Customer in the Middle age group(2 and 3) are churned more compared to other age group
+
+
+Distribution of Churn count across status 
+```{r}
+customerInfo %>% 
+  ggplot(aes(x = Status, fill = factor(Churn))) + 
+  geom_bar(position = "dodge") +
+  scale_x_discrete(limits = c(1,2))
+```
+Observation:
+Status is ordinal attribute; 1 - Active ; 2 - Inactive
+Inactive customers are more likely to be churned, compared to the Active customers.
+
+Pair plot of all features
+```{r}
+ggpairs(customerInfo[,c("Call..Failure", "Complains", "Subscription..Length", "Charge..Amount","Seconds.of.Use","Frequency.of.use","Age.Group", "Status")])
+```
+Observation:
+
+Frequency_of_use and seconds_of_use is strongly correlated.
+
+Using correlation matrix to find the correlation
+```{r}
+library(corrplot)
+
+cor <- cor(customerInfo)
+corrplot(cor, method="pie")
+```
+Observation:
+ 
+ There is a positive correlation with Frequency_of_sms and customer_value
+ 
+ 
+
