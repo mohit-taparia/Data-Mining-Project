@@ -1,125 +1,114 @@
 ```{r}
+library(readxl)
+library(dplyr)
+library(caret)
 library(xgboost)
-library(tidyverse)
-library(readxl)    
-library(magrittr)
+library(ggplot2)
 ```
+
 
 ```{r}
 file_path <- "/Users/mo/Desktop/Data Mining/Data-Mining-Project/Data/Latest Reported Events (4).xlsx"
 diseaseInfo <- read_excel(file_path)
+```
+
+```{r}
 head(diseaseInfo)
+```
+
+
+```{r}
+diseaseInfo <- diseaseInfo %>%
+  mutate(across(where(is.numeric), ~replace_na(., 0))) %>%
+  mutate(across(where(is.character), ~replace_na(., "Unknown")))
+```
+
+```{r}
+diseaseInfo$Region <- as.numeric(factor(diseaseInfo$Region))
+diseaseInfo$disease <- as.numeric(factor(diseaseInfo$disease))
+diseaseInfo$locality <- as.numeric(factor(diseaseInfo$locality))
+diseaseInfo$country <- as.numeric(factor(diseaseInfo$country))
+diseaseInfo$Species <- as.numeric(factor(diseaseInfo$Species))
+diseaseInfo$`diagnosisSource` <- as.numeric(factor(diseaseInfo$`diagnosisSource`))
+diseaseInfo$`Diagnosis Status` <- as.numeric(factor(diseaseInfo$`Diagnosis Status`))
+diseaseInfo$`observation date` <- as.numeric(as.Date(diseaseInfo$`observation date`))
+diseaseInfo$`report date` <- as.numeric(as.Date(diseaseInfo$`report date`))
 
 ```
 
 ```{r}
-set.seed(1234)
-diseaseInfo <- diseaseInfo[sample(1:nrow(diseaseInfo)), ]
+target <- "humansAffected"
+features <- setdiff(names(diseaseInfo), target)
 ```
 
 ```{r}
-diseaseInfo_humansRemoved <- diseaseInfo %>%
-    select(-starts_with("human"))
-diseaseLabels <- diseaseInfo %>%
-    select(humansAffected) %>%  
-    is.na() %>%             
-    magrittr::not()
-head(diseaseLabels)     
-head(diseaseInfo$humansAffected) 
+diseaseInfo[features] <- lapply(diseaseInfo[features], as.numeric)
+```
 
+
+```{r}
+set.seed(123)
+trainIndex <- createDataPartition(diseaseInfo[[target]], p = 0.8, 
+                                  list = FALSE, 
+                                  times = 1)
+dataTrain <- diseaseInfo[trainIndex, ]
+dataTest <- diseaseInfo[-trainIndex, ]
 ```
 
 ```{r}
-head(diseaseInfo$country)
-region <- model.matrix(~country-1, diseaseInfo)
-diseaseInfo_numeric$is_domestic <- str_detect(diseaseInfo$speciesDescription, "domestic")
-speciesList <- diseaseInfo$speciesDescription %>%
-  str_replace_all("[[:punct:]]", "") %>% 
-  str_extract("[a-z]*$")
-speciesList <- tibble(species = speciesList)
-options(na.action='na.pass')
-species <- model.matrix(~species-1, speciesList)
-diseaseInfo_numeric <- cbind(diseaseInfo_numeric, region, species)
-diseaseInfo_matrix <- data.matrix(diseaseInfo_numeric)
-```
-
-```{r}
-numberOfTrainingSamples <- round(length(diseaseLabels) * 0.7)
-
-train_data <- diseaseInfo_matrix[1:numberOfTrainingSamples, ]
-train_labels <- diseaseLabels[1:numberOfTrainingSamples]
-
-test_data <- diseaseInfo_matrix[-(1:numberOfTrainingSamples), ]
-test_labels <- diseaseLabels[-(1:numberOfTrainingSamples)]
-```
-
-```{r}
-dtrain <- xgb.DMatrix(data = train_data, label = train_labels)
-dtest <- xgb.DMatrix(data = test_data, label = test_labels)
-```
-
-```{r}
-model <- xgboost(data = dtrain,   
-                 nrounds = 2, 
-                 objective = "binary:logistic") 
-```
-
-```{r}
-pred <- predict(model, dtest)
-
-err <- mean(as.numeric(pred > 0.5) != test_labels)
-print(paste("test-error =", err))
-```
-
-```{r}
-model_tuned <- xgboost(data = dtrain,         
-                       max.depth = 3, 
-                       nround = 2, 
-                       objective = "binary:logistic") # the objective function 
-pred <- predict(model_tuned, dtest)
-err <- mean(as.numeric(pred > 0.5) != test_labels)
-print(paste("test-error=", err))
+train_matrix <- xgb.DMatrix(data = as.matrix(dataTrain[, features]), label = dataTrain[[target]])
+test_matrix <- xgb.DMatrix(data = as.matrix(dataTest[, features]), label = dataTest[[target]])
 
 ```
 
 ```{r}
-negative_cases <- sum(train_labels == FALSE)
-positive_cases <- sum(train_labels == TRUE)
-
-model_tuned <- xgboost(data = dtrain,           
-                       max.depth = 3, 
-                       nround = 10,
-                       early_stopping_rounds = 3, 
-                       objective = "binary:logistic",
-                       scale_pos_weight = negative_cases / positive_cases)
-pred <- predict(model_tuned, dtest)
-err <- mean(as.numeric(pred > 0.5) != test_labels)
-print(paste("test-error=", err))
-
+params <- list(
+  objective = "reg:squarederror",
+  eval_metric = "rmse",
+  max_depth = 6,
+  eta = 0.3,
+  nthread = 2
+)
 ```
 
 ```{r}
-model_tuned <- xgboost(data = dtrain,  
-                       max.depth = 3, 
-                       nround = 10, 
-                       early_stopping_rounds = 3, 
-                       objective = "binary:logistic",
-                       scale_pos_weight = negative_cases / positive_cases,
-                       gamma = 1) 
-pred <- predict(model_tuned, dtest)
-err <- mean(as.numeric(pred > 0.5) != test_labels)
-print(paste("test-error=", err))
-
+xgb_model <- xgb.train(params = params, 
+                       data = train_matrix, 
+                       nrounds = 100, 
+                       watchlist = list(train = train_matrix, eval = test_matrix), 
+                       verbose = 1)
 ```
 
 ```{r}
-xgb.plot.multi.trees(feature_names = colnames(diseaseInfo_matrix), 
-                     model = model_tuned)
-odds_to_probs <- function(odds){
-    return(exp(odds) / (1 + exp(odds)))
-}
-odds_to_probs(-0.599)
-importance_matrix <- xgb.importance(colnames(diseaseInfo_matrix), model = model_tuned)
+preds <- predict(xgb_model, test_matrix)
+```
+
+```{r}
+mse <- mean((dataTest[[target]] - preds)^2)
+rmse <- sqrt(mse)
+cat("Root Mean Squared Error: ", rmse, "\n")
+```
+
+```{r}
+dataTest$preds <- preds
+country_agg <- dataTest %>%
+  group_by(country) %>%
+  summarize(total_affected = sum(preds)) %>%
+  arrange(desc(total_affected))
+```
+
+```{r}
+ggplot(country_agg, aes(x = country, y = total_affected)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Total Affected People by Country",
+       x = "Country",
+       y = "Total Affected People") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+importance_matrix <- xgb.importance(feature_names = features, model = xgb_model)
 xgb.plot.importance(importance_matrix)
 ```
 
