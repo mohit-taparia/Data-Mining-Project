@@ -18,6 +18,7 @@ library(caret)
 library(xgboost)
 library(ggplot2)
 library(GGally)
+library(fastDummies)
 ```
 
 The case study references the Telecom customer churn dataset from the EMPRESS-i on https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset
@@ -42,6 +43,16 @@ Checking for null Values
 ```{r}
 sum(is.na(customerInfo))
 ```
+Remove Age column,as Age.Group column is used to infer the same details
+```{r}
+customerInfo$Age.Group <- factor(customerInfo$Age.Group)
+```
+
+Updating the Age.Group as factors as they indicate a category
+```{r}
+customerInfo <- customerInfo %>% select(-c(Age))
+```
+
 
 Count of Number of customer who got churned or not
 ```{r}
@@ -122,6 +133,108 @@ corrplot(cor, method="pie")
 Observation:
  
  There is a positive correlation with Frequency_of_sms and customer_value
- 
+
+Dropping the correlated columns
+```{r}
+customerInfo <- customerInfo %>% select(-c(Frequency.of.use))
+```
+
+Scaling Continuous Variable
+```{r}
+customerInfo_int <- customerInfo[,-c(2,8,9,10,12)]
+customerInfo_int <- data.frame(scale(customerInfo_int))
+```
+
+Creating factors for Categorical Data
+```{r}
+customerInfo$Complains <- factor(customerInfo$Complains)
+customerInfo$Age.Group <- factor(customerInfo$Age.Group)
+customerInfo$Tariff.Plan <- factor(customerInfo$Tariff.Plan)
+customerInfo$Status <- factor(customerInfo$Status)
+#customerInfo$Churn <- factor(customerInfo$Churn)
+customerInfo_scaled <- customerInfo %>% 
+                  select(c(2,8,9,10,12)) %>%
+                  cbind(customerInfo_int)
+```
  
 
+Creating Dummy variable for Categorical Data
+```{r}
+sparse_matrix <- model.matrix(Churn ~ ., data = customerInfo_scaled)[,-1]
+customerInfo_final <-  customerInfo_scaled %>% select(c("Churn")) %>% cbind(sparse_matrix)
+```
+
+Scaling Continuous Variable
+Split Train and Test Data
+
+```{r}
+target <- "Churn"
+features <- setdiff(names(customerInfo_final), target)
+set.seed(123)
+trainIndex <- createDataPartition(customerInfo_final[[target]], p = 0.8, 
+                                  list = FALSE, 
+                                  times = 1)
+dataTrain <- customerInfo_final[trainIndex, ]
+dataTest <- customerInfo_final[-trainIndex, ]
+xTrain <- dataTrain[, features]
+yTrain <- dataTrain[[target]]
+xTest <- dataTest[, features]
+yTest <- dataTest[[target]]
+
+```
+
+
+
+setting up a grid that tunes both these parameters, and also the eta (learning rate).
+```{r}
+xgb_grid = expand.grid(
+nrounds = 1000,
+eta = c(0.1, 0.05, 0.01),
+max_depth = c(2, 3, 4, 5, 6),
+gamma = 0,
+colsample_bytree=1,
+min_child_weight=c(1, 2, 3, 4 ,5),
+subsample=1
+)
+```
+
+The next step is to let caret find the best hyperparameter values (using 5 fold cross validation).
+```{r}
+set.seed(27042018)
+my_control <-trainControl(method="cv", number=5)
+xgb_caret <- train(Churn~., data=dataTrain, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
+xgb_caret$bestTune
+```
+```{r}
+# put our testing & training data into two seperates Dmatrixs objects
+dtrain <- xgb.DMatrix(data = as.matrix(xTrain), label= yTrain)
+dtest <- xgb.DMatrix(data = as.matrix(xTest), label= yTest)
+best_tune_param<-list(
+        objective = "reg:logistic",
+        eval_metric = "error",
+        eta=0.05, #default = 0.3
+        gamma=0,
+        max_depth=6, #default=6
+        min_child_weight=1, #default=1
+        subsample=1,
+        colsample_bytree=1
+)
+```
+
+ cross validation to determine the best number of rounds (for the given set of parameters).
+```{r}
+xgbcv <- xgb.cv( params = best_tune_param, data = dtrain, nrounds = 500, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
+```
+```{r}
+#train the model using the best iteration found by cross validation
+xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 252,
+                       watchlist = list(train = dtrain, eval = dtest))
+```
+ 
+```{r}
+preds <- predict(xgb_mod, dtest)
+predictions_XGB <- exp(XGBpred) #need to reverse the log to the real values
+head(predictions_XGB)
+```
+ 
+ 
