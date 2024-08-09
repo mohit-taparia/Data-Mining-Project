@@ -172,6 +172,7 @@ customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
 ```
 
 Scaling Continuous Variable
+
 ```{r}
 customerInfo_int <- customerInfo[,-c(2,8,9,10,12)]
 customerInfo_int <- data.frame(scale(customerInfo_int))
@@ -194,13 +195,14 @@ Creating Dummy variable for Categorical Data
 ```{r}
 sparse_matrix <- model.matrix(Churn ~ ., data = customerInfo_scaled)[,-1]
 customerInfo_final <-  customerInfo_scaled %>% select(c("Churn")) %>% cbind(sparse_matrix)
+
 ```
 
-Scaling Continuous Variable
 Split Train and Test Data
 
 ```{r}
 target <- "Churn"
+#customerInfo_final$Churn <- factor(customerInfo_final$Churn, levels = c(0,1))
 features <- setdiff(names(customerInfo_final), target)
 set.seed(123)
 trainIndex <- createDataPartition(customerInfo_final[[target]], p = 0.8, 
@@ -234,20 +236,21 @@ The next step is to let caret find the best hyperparameter values (using 5 fold 
 ```{r}
 set.seed(27042018)
 my_control <-trainControl(method="cv", number=5)
-xgb_caret <- train(Churn~., data=dataTrain, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
-xgb_caret$bestTune
+#Churn~., data=dataTrain,
+#xgb_caret <- train(x=xTrain, y=yTrain, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
+#xgb_caret$bestTune
 ```
 ```{r}
 # put our testing & training data into two seperates Dmatrixs objects
 dtrain <- xgb.DMatrix(data = as.matrix(xTrain), label= yTrain)
 dtest <- xgb.DMatrix(data = as.matrix(xTest), label= yTest)
 best_tune_param<-list(
-        objective = "reg:logistic",
-        eval_metric = "error",
-        eta=0.05, #default = 0.3
+        objective = "binary:logistic",
+        eval_metric = "rmse",
+        eta=0.01, #default = 0.3
         gamma=0,
         max_depth=6, #default=6
-        min_child_weight=1, #default=1
+        min_child_weight=4, #default=1
         subsample=1,
         colsample_bytree=1
 )
@@ -259,14 +262,35 @@ xgbcv <- xgb.cv( params = best_tune_param, data = dtrain, nrounds = 500, nfold =
 ```
 ```{r}
 #train the model using the best iteration found by cross validation
-xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 252,
+xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 500,
                        watchlist = list(train = dtrain, eval = dtest))
 ```
  
 ```{r}
 preds <- predict(xgb_mod, dtest)
-predictions_XGB <- exp(XGBpred) #need to reverse the log to the real values
+predictions_XGB <- data.frame(actual = yTest,
+                          predicted = ifelse(preds > 0.5, 1, 0))
 head(predictions_XGB)
+```
+ 
+ 
+Confusion matrix for the predictions
+```{r}
+confusionMatrix(as.factor(predictions_XGB$predicted), as.factor(yTest), mode = "everything")
+```
+Plotting the roc curve
+```{r}
+#plot.roc(yTest , as.numeric(predictions_XGB$predicted) , print.auc = TRUE , col = 'red' , print.auc.y = 0.7)
+library(pROC)
+roc_score=roc(yTest , as.numeric(predictions_XGB$predicted)) #AUC score
+plot(roc_score ,main ="ROC curve -- XGBoost ")
+```
+Feature Importance
+```{r}
+#view variable importance plot
+#library(Ckmeans.1d.dp) #required for ggplot clustering
+#mat <- xgb.importance (feature_names = colnames(train1),model = xgb_mod)
+#xgb.ggplot.importance(importance_matrix = mat[1:20], rel_to_first = TRUE)
 ```
  
  
