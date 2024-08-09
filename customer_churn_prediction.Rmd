@@ -18,7 +18,7 @@ library(caret)
 library(xgboost)
 library(ggplot2)
 library(GGally)
-library(fastDummies)Í
+library(fastDummies)
 ```
 
 The case study references the Telecom customer churn dataset from the EMPRESS-i on https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset
