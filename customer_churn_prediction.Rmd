@@ -2,7 +2,7 @@
 title:  'XGBoost Algorithm'
 subtitle: 'INFO 523'
 author:
-- name: Student -  [Gayathri Renganathan, Mohit Taparia]
+- name: Student -  [Gayathri Renganathan, Mohit Rakesh Taparia]
   affiliation: [iSchool]
 - name: Instructor -  Cristian Román-Palacios
   affiliation: School of Information, University of Arizona, Tucson, AZ
@@ -18,7 +18,7 @@ library(caret)
 library(xgboost)
 library(ggplot2)
 library(GGally)
-library(fastDummies)
+library(fastDummies)Í
 ```
 
 The case study references the Telecom customer churn dataset from the EMPRESS-i on https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset
@@ -61,10 +61,10 @@ customerInfo %>% group_by(Churn) %>% summarise(n=n()) %>% arrange(desc(n))
 
 Plotting churn count in the dataset.
 ```{r}
-ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
-  geom_bar()+ 
-  labs(fill = "Churn", title = "Churn count plot")
-  
+ggplot(customerInfo, aes(x = Churn, y = Charge..Amount, fill = factor(Churn))) +
+  geom_boxplot() +
+  labs(x = "Churn", y = "Charge Amount", fill = "Churn", title = "Charge Amount Distribution by Churn Status") +
+  theme_minimal()
 ```
 Observation1: 
 using this Count plot,  target variable is checked for data imbalance  (if there are more number of churn customers than customers who wont churn or vice versa)
@@ -73,10 +73,10 @@ There is some data imbalance, as the number of churn consumers is significantly 
 
 Count plot of Age Group to see the distribution of customers across Age
 ```{r}
-ggplot(customerInfo, aes(Age.Group, fill = factor(Age.Group))) +
-  geom_bar()+ 
-  labs(fill = "Age Group", title = "Age Group count plot")
-  
+ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
+  geom_density(aes(y = ..count..), alpha = 0.6) +
+  labs(x = "Age Group", y = "Count", title = "Density Plot of Age Group Distribution with Count", fill = "Age Group") +
+  theme_minimal()
 ```
 Observation2: 
 There are more customer in the middle age group (2 and 3)
@@ -84,10 +84,20 @@ There are more customer in the middle age group (2 and 3)
 
 Count plot of Age Group to see the distribution of customers across Age
 ```{r}
-ggplot(customerInfo, aes(Charge..Amount, fill = factor(Charge..Amount))) +
-  geom_bar()+ 
-  labs(fill = "Charge Amount", title = "Charge Amount count plot")
-  
+ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
+  geom_bar() + 
+  scale_fill_brewer(palette = "Set3") +  # Apply a custom color palette
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5, size=3.5) +  # Add count labels on top of the bars
+  labs(x = "Charge Amount", y = "Count", fill = "Charge Amount", title = "Distribution of Customers by Charge Amount") +
+  theme_minimal() +  # Apply a minimalistic theme for clean presentation
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    legend.position = "right",  # Position the legend on the right
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )
 ```
 Observation3: 
 Charge amount is an ordinal attribute with lowest value being 0 and highest being 9
@@ -96,9 +106,20 @@ The charge amount of 0 has the highest count, and the count decreases with the c
 
 Distribution of Churn count across age group
 ```{r}
-customerInfo %>% 
-  ggplot(aes(x = Age.Group, fill = factor(Churn))) + 
-  geom_bar()  
+ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) + 
+  geom_bar(position = "dodge", color = "black") +  # Grouped bar plot with black border
+  scale_fill_manual(values = c("#00AFBB", "#E7B800")) +  # Custom colors for the Churn groups
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.3, position = position_dodge(0.9), size = 3.5) +  # Adding count labels
+  labs(x = "Age Group", y = "Count", fill = "Churn", title = "Churn Distribution Across Age Groups") +
+  theme_minimal() +  # Apply a minimalistic theme
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    legend.position = "right",  # Position the legend on the right
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  ) 
 ```
 Observation:
 Customer in the Middle age group(2 and 3) are churned more compared to other age group
@@ -106,10 +127,30 @@ Customer in the Middle age group(2 and 3) are churned more compared to other age
 
 Distribution of Churn count across status 
 ```{r}
-customerInfo %>% 
-  ggplot(aes(x = Status, fill = factor(Churn))) + 
-  geom_bar(position = "dodge") +
-  scale_x_discrete(limits = c(1,2))
+# Create a table of counts for Status and Churn
+status_churn_table <- table(customerInfo$Status, customerInfo$Churn)
+
+# Convert the table to a data frame for easier plotting
+status_churn_df <- as.data.frame(status_churn_table)
+colnames(status_churn_df) <- c("Status", "Churn", "Count")
+
+# Plotting the heatmap
+ggplot(status_churn_df, aes(x = factor(Status), y = factor(Churn), fill = Count)) + 
+  geom_tile(color = "white") +  # Create the heatmap tiles with white borders
+  scale_fill_gradient(low = "#FFCCCC", high = "#990000") +  # Use a gradient color scale
+  labs(x = "Status", y = "Churn", fill = "Count", title = "Heatmap of Churn Distribution Across Status") +
+  scale_x_discrete(labels = c("1" = "Active", "2" = "Inactive")) +  # Replace the numeric labels with meaningful ones
+  theme_minimal() +  # Apply a minimalistic theme
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    legend.position = "right",  # Position the legend on the right
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )
+
+
 ```
 Observation:
 Status is ordinal attribute; 1 - Active ; 2 - Inactive
