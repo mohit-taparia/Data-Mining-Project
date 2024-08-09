@@ -43,15 +43,6 @@ Checking for null Values
 ```{r}
 sum(is.na(customerInfo))
 ```
-Remove Age column,as Age.Group column is used to infer the same details
-```{r}
-customerInfo$Age.Group <- factor(customerInfo$Age.Group)
-```
-
-Updating the Age.Group as factors as they indicate a category
-```{r}
-customerInfo <- customerInfo %>% select(-c(Age))
-```
 
 
 Count of Number of customer who got churned or not
@@ -136,7 +127,7 @@ Observation:
 
 Dropping the correlated columns
 ```{r}
-customerInfo <- customerInfo %>% select(-c(Frequency.of.use))
+customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
 ```
 
 Scaling Continuous Variable
@@ -151,7 +142,7 @@ customerInfo$Complains <- factor(customerInfo$Complains)
 customerInfo$Age.Group <- factor(customerInfo$Age.Group)
 customerInfo$Tariff.Plan <- factor(customerInfo$Tariff.Plan)
 customerInfo$Status <- factor(customerInfo$Status)
-#customerInfo$Churn <- factor(customerInfo$Churn)
+customerInfo$Age.Group <- factor(customerInfo$Age.Group)
 customerInfo_scaled <- customerInfo %>% 
                   select(c(2,8,9,10,12)) %>%
                   cbind(customerInfo_int)
