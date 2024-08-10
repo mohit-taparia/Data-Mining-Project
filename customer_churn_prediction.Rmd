@@ -13,7 +13,8 @@ editor_options:
     wrap: 72
 ---
 
-```{r include=FALSE}
+
+```{r message=FALSE}
 library(readxl)
 library(dplyr)
 library(caret)
@@ -31,34 +32,34 @@ library(pROC)
 The **read_excel()** method loads the dataset stored in the Excel
 format.
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 file_path <- "Data/Customer Churn.csv"
 customerInfo <- read.csv(file_path,  sep = ",", header = TRUE)
 ```
 
-```{r}
+```{r include=TRUE, warning=FALSE}
 head(customerInfo,10)
 ```
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 summary(customerInfo)
 ```
 
 ### **Checking for null Values**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 sum(is.na(customerInfo))
 ```
 
 ### **Count of Number of customer who got churned or not**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 customerInfo %>% group_by(Churn) %>% summarise(n=n()) %>% arrange(desc(n))
 ```
 
 ### Plotting churn count in the dataset.
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
   geom_bar(width = 0.6) + 
   scale_fill_manual(values = c("#FFA07A", "#20B2AA")) +  
@@ -91,7 +92,7 @@ consumers is significantly lower than the number of customers that will
 not churn\
 Count plot of Age Group to see the distribution of customers across Age
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
   geom_density(aes(y = ..count..), alpha = 0.7, color = "black", size = 0.7) +
   scale_fill_brewer(palette = "Set2") +  
@@ -119,7 +120,7 @@ ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
 There are more customer in the middle age group (2 and 3)\
 Count plot of Age Group to see the distribution of customers across Age
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
   geom_bar() + 
   scale_fill_brewer(palette = "Set3") +
@@ -143,7 +144,7 @@ highest being 9 The charge amount of 0 has the highest count, and the
 count decreases with the charge amount.\
 Distribution of Churn count across age group
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) + 
   geom_bar(position = "dodge", color = "black") + 
   scale_fill_manual(values = c("#00AFBB", "#E7B800")) +  
@@ -166,7 +167,7 @@ Customer in the Middle age group(2 and 3) are churned more compared to
 other age group\
 Distribution of Churn count across status
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 status_churn_table <- table(customerInfo$Status, customerInfo$Churn)
 status_churn_df <- as.data.frame(status_churn_table)
 colnames(status_churn_df) <- c("Status", "Churn", "Count")
@@ -190,12 +191,14 @@ ggplot(status_churn_df, aes(x = factor(Status), y = factor(Churn), fill = Count)
 
 ## ***Observation 5:*** 
 
-Status is ordinal attribute; 1 - Active ; 2 - Inactive Inactive
-customers are more likely to be churned, compared to the Active
+Status is ordinal attribute; 1 - Active ; 2 - Inactive \
+Inactive customers are more likely to be churned, compared to the Active
 customers.\
+
+
 Pair plot of all features
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 ggpairs(
   customerInfo[,c("Call..Failure", "Complains", "Subscription..Length", "Charge..Amount","Seconds.of.Use","Frequency.of.use","Age.Group", "Status")],
   upper = list(continuous = wrap("cor", size = 3)), 
@@ -220,7 +223,7 @@ Frequency_of_use and seconds_of_use is strongly correlated.\
 
 Using correlation matrix to find the correlation
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 cor_matrix <- cor(customerInfo)
 corrplot(
   cor_matrix,
@@ -246,20 +249,20 @@ corrplot(
 Dropping the correlated columns to avoid collinearity
 Dropping Age column, as `Age` and `Age.Group` represent same feature.
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
 ```
 
 ### **Scaling Continuous Variable**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 customerInfo_int <- customerInfo[,-c(2,8,9,10,12)]
 customerInfo_int <- data.frame(scale(customerInfo_int))
 ```
 
 ### **Creating factors for Categorical Data**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 customerInfo$Complains <- factor(customerInfo$Complains)
 customerInfo$Age.Group <- factor(customerInfo$Age.Group)
 customerInfo$Tariff.Plan <- factor(customerInfo$Tariff.Plan)
@@ -272,7 +275,7 @@ customerInfo_scaled <- customerInfo %>%
 
 ### **Creating Dummy variable for Categorical Data**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 sparse_matrix <- model.matrix(Churn ~ ., data = customerInfo_scaled)[,-1]
 customerInfo_final <-  customerInfo_scaled %>% select(c("Churn")) %>% cbind(sparse_matrix)
 
@@ -280,7 +283,7 @@ customerInfo_final <-  customerInfo_scaled %>% select(c("Churn")) %>% cbind(spar
 
 ### **Split Train and Test Data**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 target <- "Churn"
 #customerInfo_final$Churn <- factor(customerInfo_final$Churn, levels = c(0,1))
 features <- setdiff(names(customerInfo_final), target)
@@ -299,14 +302,14 @@ yTest <- dataTest[[target]]
 
 ### **Put our testing & training data into two separates Dmatrixs objects**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 dtrain <- xgb.DMatrix(data = as.matrix(xTrain), label= yTrain)
 dtest <- xgb.DMatrix(data = as.matrix(xTest), label= yTest)
 ```
 
 ## **Logistic regression**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 logistic_model <- glm(Churn ~ ., data = dataTrain, family = "binomial")
 logistic_predict_test <- predict(logistic_model , xTest, type = "response")
 predictions_Logistic <- data.frame(actual = yTest,
@@ -316,7 +319,7 @@ confusionMatrix(as.factor(predictions_Logistic$predicted), as.factor(yTest),posi
 
 ### **Running with default params**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 
 default_param<-list(
         objective = "binary:logistic",
@@ -331,7 +334,7 @@ default_param<-list(
 xgbcv <- xgb.cv( params = default_param, data = dtrain, nrounds = 500, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
 ```
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 
 xgb_mod <- xgb.train(data = dtrain, params=default_param, nrounds = 38)
 preds_def <- predict(xgb_mod, dtest)
@@ -342,7 +345,7 @@ confusionMatrix(as.factor(predictions_def_XGB$predicted), as.factor(yTest),posit
 
 ### **Setting up a grid that tunes both these parameters, and also the ETA  (learning rate).**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 xgb_grid = expand.grid(
 nrounds = 1000,
 eta = c(0.1, 0.05, 0.03),
@@ -356,7 +359,7 @@ subsample=1
 
 ### **The next step is to let caret find the best hyper-parameter values  (using 5 fold cross validation).**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 set.seed(27042018)
 my_control <-trainControl(method="cv", number=5)
 #xgb_caret <- train(x=xTrain, y=yTrain, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
@@ -365,8 +368,7 @@ my_control <-trainControl(method="cv", number=5)
 
 ### **Forming the Params based on the best tune**
 
-```{r}
-
+```{r warning=FALSE, error=FALSE, message=FALSE}
 best_tune_param<-list(
         objective = "binary:logistic",
         eval_metric = "logloss",
@@ -381,16 +383,15 @@ best_tune_param<-list(
 
 ### **Cross validation to determine the best number of rounds  (for the given set of parameters).**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 xgbcv <- xgb.cv( params = best_tune_param, data = dtrain, nrounds = 700, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
 ```
 
-```{r}
-#train the model using the best iteration found by cross validation
+```{r warning=FALSE, error=FALSE, message=FALSE}
 xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 352)
 ```
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 preds <- predict(xgb_mod, dtest)
 predictions_XGB <- data.frame(actual = yTest,
                           predicted = ifelse(preds > 0.3, 1, 0))
@@ -399,13 +400,13 @@ head(predictions_XGB)
 
 ## **Confusion matrix for the predictions**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 confusionMatrix(as.factor(predictions_XGB$predicted), as.factor(yTest),positive = "1", mode = "everything")
 ```
 
 ### **Plotting the roc curve**
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 plot.roc(yTest, as.numeric(predictions_XGB$predicted), 
          print.auc = TRUE, 
          col = 'red', 
@@ -466,7 +467,8 @@ ggplot(customerInfo, aes(x = Complains, fill = factor(Churn))) +
     legend.text = element_text(size = 9)
   ) 
 ```
- Distribution of Churn count across Seconds.of.use
+
+Distribution of Churn count across Seconds.of.use
 ```{r}
 ggplot(customerInfo, aes(x = Churn, y = Seconds.of.Use, fill = factor(Churn))) + 
   geom_boxplot() +  
