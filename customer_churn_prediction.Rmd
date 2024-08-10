@@ -164,9 +164,12 @@ corrplot(cor, method="pie")
 ```
 Observation:
  
- There is a positive correlation with Frequency_of_sms and customer_value
+ There is a strong positive correlation with Frequency_of_use and Seconds_of_use
+ There is a positive correlation between complains and customer Churn
+ 
 
-Dropping the correlated columns
+Dropping the correlated columns to avoid collinearity
+Dropping Age column, as `Age` and `Age.Group` represent same feature.
 ```{r}
 customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
 ```
@@ -331,5 +334,48 @@ legend("bottom", c("XgBoost - Fine Tuned", "XGBoost", "Logistic"),
 #plot(roc_score ,main ="ROC curve -- XGBoost ")
 ```
 
- 
+Feature Importance
+```{r}
+#view variable importance plot
+mat <- xgb.importance (feature_names = colnames(xTrain),model = xgb_mod)
+xgb.ggplot.importance(importance_matrix = mat, rel_to_first = TRUE, measure = "Gain")
+```
+Distribution of Churn count across Complains
+```{r}
+ggplot(customerInfo, aes(x = Complains, fill = factor(Churn))) + 
+  geom_bar(position = "dodge", color = "black") +  # Grouped bar plot with black border
+  scale_fill_manual(values = c("#00AFBB", "#E7B800")) +  # Custom colors for the Churn groups
+  scale_x_discrete(labels = c("0" = "No complains", "1" = "Complains")) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.3, position = position_dodge(0.9), size = 3.5) +  # Adding count labels
+  labs(x = "Complains", y = "Count", fill = "Churn", title = "Churn Distribution Across Complains") +
+  theme_minimal() +  # Apply a minimalistic theme
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    legend.position = "right",  # Position the legend on the right
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  ) 
+```
+ Distribution of Churn count across Seconds.of.use
+```{r}
+ggplot(customerInfo, aes(x = Churn, y = Seconds.of.Use, fill = factor(Churn))) + 
+  geom_boxplot() +  
+  scale_x_discrete(labels = c("0" = "Not Churned", "1" = "Churned")) +
+  labs(x = "Churn", y = "Seconds.of.use", fill = "Churn", title = "Churn Distribution Across Seconds.of.use") +
+  theme_minimal() +  # Apply a minimalistic theme
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold the title
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    legend.position = "right",  # Position the legend on the right
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  ) 
+```
+ Final Observation from Model
+ Inactive Customers (Status) are most likely to be churned. 
+ Customers who use for less seconds are likely to be churned.
+ Customers who raised Complaints are churned compared to customers with no complaints.
  
