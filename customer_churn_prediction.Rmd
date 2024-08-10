@@ -62,13 +62,15 @@ customerInfo %>% group_by(Churn) %>% summarise(n=n()) %>% arrange(desc(n))
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
   geom_bar(width = 0.6) + 
-  scale_fill_manual(values = c("#FFA07A", "#20B2AA")) +  
+  scale_fill_manual(values = c("#FFA07A", "#20B2AA"), 
+        labels = c("0" = "Not Churned", "1" = "Churned")) +    
   labs(
     fill = "Churn Status",
     title = "Churn Count Plot",
     x = "Churn",
     y = "Customer Count"
   ) +
+  scale_x_continuous(breaks = seq(0, max(customerInfo$Churn), by = 1)) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
@@ -126,6 +128,7 @@ ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
   scale_fill_brewer(palette = "Set3") +
   geom_text(stat='count', aes(label=..count..), vjust=-0.5, size=3.5) +
   labs(x = "Charge Amount", y = "Count", fill = "Charge Amount", title = "Distribution of Customers by Charge Amount") +
+  scale_x_continuous(breaks = seq(0, max(customerInfo$Charge..Amount), by = 1)) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
@@ -147,7 +150,8 @@ Distribution of Churn count across age group
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) + 
   geom_bar(position = "dodge", color = "black") + 
-  scale_fill_manual(values = c("#00AFBB", "#E7B800")) +  
+  scale_fill_manual(values = c("#00AFBB", "#E7B800"), 
+                    labels = c("0" = "Not Churned", "1" = "Churned")) +   
   geom_text(stat = 'count', aes(label = ..count..), vjust = -0.3, position = position_dodge(0.9), size = 3.5) +
   labs(x = "Age Group", y = "Count", fill = "Churn", title = "Churn Distribution Across Age Groups") +
   theme_minimal() +
@@ -168,25 +172,32 @@ other age group\
 Distribution of Churn count across status
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
-status_churn_table <- table(customerInfo$Status, customerInfo$Churn)
-status_churn_df <- as.data.frame(status_churn_table)
-colnames(status_churn_df) <- c("Status", "Churn", "Count")
-ggplot(status_churn_df, aes(x = factor(Status), y = factor(Churn), fill = Count)) + 
-  geom_tile(color = "white") +  
-  scale_fill_gradient(low = "#FFCCCC", high = "#990000") +  
-  labs(x = "Status", y = "Churn", fill = "Count", title = "Heatmap of Churn Distribution Across Status") +
-  scale_x_discrete(labels = c("1" = "Active", "2" = "Inactive")) +  
+status_churn_pie <- status_churn_df %>%
+  group_by(Status) %>%
+  mutate(Percentage = Count / sum(Count) * 100,
+         ChurnLabel = ifelse(Churn == 1, "Churned", "Not Churned"),
+         StatusLabel = ifelse(Status == 1, "Active", "Inactive"))
+
+ggplot(status_churn_pie, aes(x = "", y = Percentage, fill = ChurnLabel)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y", start = 0) +
+  facet_wrap(~StatusLabel, ncol = 2) +
+  labs(x = NULL, y = NULL, fill = "Churn", title = "Pie Chart of Churn Distribution Across Status") +
   theme_minimal() +  
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
-    axis.title.x = element_text(size = 12),
-    axis.title.y = element_text(size = 12),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text = element_blank(),
     legend.position = "right",
     legend.title = element_text(size = 10),
-    legend.text = element_text(size = 9)
-  )
-
-
+    legend.text = element_text(size = 9),
+    panel.grid = element_blank()
+  ) +
+  geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5), size = 3.5) +
+  scale_fill_discrete(labels = c("Churned", "Not Churned"))
+ 
 ```
 
 ## ***Observation 5:*** 
@@ -207,11 +218,11 @@ ggpairs(
   axisLabels = "show" 
 ) +
   theme(
-    axis.text.x = element_text(angle = 30, hjust = 1, size = 3),  
-    axis.text.y = element_text(size = 2),  
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 2),  
+    axis.text.y = element_text(size = 1),  
     panel.grid.minor = element_blank(),  
     panel.grid.major = element_line(color = "gray90"), 
-    strip.text = element_text(size = 4.5, face = "bold")
+    strip.text = element_text(size = 3, face = "bold")
   )
 
 ```
