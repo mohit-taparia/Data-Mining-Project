@@ -11,7 +11,7 @@ output: html_document
 
 ---
 
-```{r}
+```{r echo=FALSE}
 library(readxl)
 library(dplyr)
 library(caret)
@@ -218,16 +218,59 @@ yTest <- dataTest[[target]]
 ```
 
 
+put our testing & training data into two seperates Dmatrixs objects
+```{r}
+dtrain <- xgb.DMatrix(data = as.matrix(xTrain), label= yTrain)
+dtest <- xgb.DMatrix(data = as.matrix(xTest), label= yTest)
+```
+
+
+Logistic regression
+```{r}
+logistic_model <- glm(Churn ~ ., data = dataTrain, family = "binomial")
+logistic_predict_test <- predict(logistic_model , xTest, type = "response")
+predictions_Logistic <- data.frame(actual = yTest,
+                          predicted = ifelse(logistic_predict_test > 0.5, 1, 0))
+confusionMatrix(as.factor(predictions_Logistic$predicted), as.factor(yTest),positive = "1",  mode = "everything")
+```
+
+
+
+Running with default params
+```{r}
+
+default_param<-list(
+        objective = "binary:logistic",
+        eval_metric = "logloss",
+        eta=0.3, #default = 0.3
+        gamma=0,
+        max_depth=6, #default=6
+        min_child_weight=1, #default=1
+        subsample=1,
+        colsample_bytree=1)
+        
+xgbcv <- xgb.cv( params = default_param, data = dtrain, nrounds = 500, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
+```
+
+
+```{r}
+
+xgb_mod <- xgb.train(data = dtrain, params=default_param, nrounds = 38)
+preds_def <- predict(xgb_mod, dtest)
+predictions_def_XGB <- data.frame(actual = yTest,
+                          predicted = ifelse(preds_def > 0.5, 1, 0))
+confusionMatrix(as.factor(predictions_def_XGB$predicted), as.factor(yTest),positive = "1",  mode = "everything")
+```
 
 setting up a grid that tunes both these parameters, and also the eta (learning rate).
 ```{r}
 xgb_grid = expand.grid(
 nrounds = 1000,
-eta = c(0.1, 0.05, 0.01),
-max_depth = c(2, 3, 4, 5, 6),
+eta = c(0.1, 0.05, 0.03),
+max_depth = c(2, 3, 4),
 gamma = 0,
 colsample_bytree=1,
-min_child_weight=c(1, 2, 3, 4 ,5),
+min_child_weight=c(1, 2, 3),
 subsample=1
 )
 ```
@@ -236,21 +279,19 @@ The next step is to let caret find the best hyperparameter values (using 5 fold 
 ```{r}
 set.seed(27042018)
 my_control <-trainControl(method="cv", number=5)
-#Churn~., data=dataTrain,
 #xgb_caret <- train(x=xTrain, y=yTrain, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
 #xgb_caret$bestTune
 ```
+forming the params based on the best tune
 ```{r}
-# put our testing & training data into two seperates Dmatrixs objects
-dtrain <- xgb.DMatrix(data = as.matrix(xTrain), label= yTrain)
-dtest <- xgb.DMatrix(data = as.matrix(xTest), label= yTest)
+
 best_tune_param<-list(
         objective = "binary:logistic",
-        eval_metric = "rmse",
-        eta=0.01, #default = 0.3
+        eval_metric = "logloss",
+        eta=0.05, #default = 0.3
         gamma=0,
-        max_depth=6, #default=6
-        min_child_weight=4, #default=1
+        max_depth=4, #default=6
+        min_child_weight=3, #default=1
         subsample=1,
         colsample_bytree=1
 )
@@ -258,39 +299,37 @@ best_tune_param<-list(
 
  cross validation to determine the best number of rounds (for the given set of parameters).
 ```{r}
-xgbcv <- xgb.cv( params = best_tune_param, data = dtrain, nrounds = 500, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
+xgbcv <- xgb.cv( params = best_tune_param, data = dtrain, nrounds = 700, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
 ```
 ```{r}
 #train the model using the best iteration found by cross validation
-xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 500,
-                       watchlist = list(train = dtrain, eval = dtest))
+xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 352)
 ```
  
 ```{r}
 preds <- predict(xgb_mod, dtest)
 predictions_XGB <- data.frame(actual = yTest,
-                          predicted = ifelse(preds > 0.5, 1, 0))
+                          predicted = ifelse(preds > 0.3, 1, 0))
 head(predictions_XGB)
 ```
  
  
 Confusion matrix for the predictions
 ```{r}
-confusionMatrix(as.factor(predictions_XGB$predicted), as.factor(yTest), mode = "everything")
+confusionMatrix(as.factor(predictions_XGB$predicted), as.factor(yTest),positive = "1", mode = "everything")
 ```
 Plotting the roc curve
 ```{r}
-#plot.roc(yTest , as.numeric(predictions_XGB$predicted) , print.auc = TRUE , col = 'red' , print.auc.y = 0.7)
+#
 library(pROC)
-roc_score=roc(yTest , as.numeric(predictions_XGB$predicted)) #AUC score
-plot(roc_score ,main ="ROC curve -- XGBoost ")
+plot.roc(yTest , as.numeric(predictions_XGB$predicted) , print.auc = TRUE , col = 'red' , print.auc.y = 0.7)
+plot.roc(yTest , as.numeric(predictions_def_XGB$predicted) , print.auc = TRUE , col = 'blue' , add = TRUE ,  print.auc.y = 0.6)
+plot.roc(yTest , as.numeric(predictions_Logistic$predicted) , print.auc = TRUE , col = 'black' , add = TRUE ,  print.auc.y = 0.5)
+legend("bottom", c("XgBoost - Fine Tuned", "XGBoost", "Logistic"),
+       lty = c(1,1), lwd = c(2, 2), col = c("red", "blue", "black"), cex = 0.75)
+#roc_score=roc(yTest , as.numeric(predictions_XGB$predicted)) #AUC score
+#plot(roc_score ,main ="ROC curve -- XGBoost ")
 ```
-Feature Importance
-```{r}
-#view variable importance plot
-#library(Ckmeans.1d.dp) #required for ggplot clustering
-#mat <- xgb.importance (feature_names = colnames(train1),model = xgb_mod)
-#xgb.ggplot.importance(importance_matrix = mat[1:20], rel_to_first = TRUE)
-```
+
  
  
