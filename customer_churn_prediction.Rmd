@@ -8,10 +8,12 @@ author:
   affiliation: School of Information, University of Arizona, Tucson, AZ
 tags: [R, RStudio, Final Project - XGBoost Algorithm]
 output: html_document
-
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
-```{r echo=FALSE}
+```{r include=FALSE}
 library(readxl)
 library(dplyr)
 library(caret)
@@ -19,17 +21,20 @@ library(xgboost)
 library(ggplot2)
 library(GGally)
 library(fastDummies)
+library(corrplot)
+library(pROC)
 ```
 
-The case study references the Telecom customer churn dataset from the EMPRESS-i on https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset
+**The case study references the Telecom customer churn dataset **
+<https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset>
 
-The read_excel() method loads the dataset stored in the Excel format. 
+The **read_excel()** method loads the dataset stored in the Excel
+format.
 
 ```{r}
 file_path <- "Data/Customer Churn.csv"
 customerInfo <- read.csv(file_path,  sep = ",", header = TRUE)
 ```
-
 
 ```{r}
 head(customerInfo,10)
@@ -39,130 +44,200 @@ head(customerInfo,10)
 summary(customerInfo)
 ```
 
-Checking for null Values
+### **Checking for null Values**
+
 ```{r}
 sum(is.na(customerInfo))
 ```
 
+### **Count of Number of customer who got churned or not**
 
-Count of Number of customer who got churned or not
 ```{r}
 customerInfo %>% group_by(Churn) %>% summarise(n=n()) %>% arrange(desc(n))
 ```
 
-Plotting churn count in the dataset.
+### Plotting churn count in the dataset.
+
 ```{r}
-ggplot(customerInfo, aes(x = Churn, y = Charge..Amount, fill = factor(Churn))) +
-  geom_boxplot() +
-  labs(x = "Churn", y = "Charge Amount", fill = "Churn", title = "Charge Amount Distribution by Churn Status") +
-  theme_minimal()
+ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
+  geom_bar(width = 0.6) + 
+  scale_fill_manual(values = c("#FFA07A", "#20B2AA")) +  
+  labs(
+    fill = "Churn Status",
+    title = "Churn Count Plot",
+    x = "Churn",
+    y = "Customer Count"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    legend.position = "top",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+
 ```
-Observation1: 
-using this Count plot,  target variable is checked for data imbalance  (if there are more number of churn customers than customers who wont churn or vice versa)
-There is some data imbalance, as the number of churn consumers is significantly lower than the number of customers that will not churn
 
+## ***Observation1:*** 
 
+Using this Count plot, target variable is checked for data imbalance (if
+there are more number of churn customers than customers who wont churn
+or vice versa) There is some data imbalance, as the number of churn
+consumers is significantly lower than the number of customers that will
+not churn\
 Count plot of Age Group to see the distribution of customers across Age
+
 ```{r}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
-  geom_density(aes(y = ..count..), alpha = 0.6) +
-  labs(x = "Age Group", y = "Count", title = "Density Plot of Age Group Distribution with Count", fill = "Age Group") +
-  theme_minimal()
+  geom_density(aes(y = ..count..), alpha = 0.7, color = "black", size = 0.7) +
+  scale_fill_brewer(palette = "Set2") +  
+  labs(
+    x = "Age Group",
+    y = "Customer Count",
+    title = "Density Plot of Age Group Distribution",
+    fill = "Age Group"
+  ) +
+  theme_minimal() +  # Apply a clean, minimal theme
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"), 
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    legend.position = "right",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
 ```
-Observation2: 
-There are more customer in the middle age group (2 and 3)
 
+### ***Observation2:*** 
 
+There are more customer in the middle age group (2 and 3)\
 Count plot of Age Group to see the distribution of customers across Age
+
 ```{r}
 ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
   geom_bar() + 
-  scale_fill_brewer(palette = "Set3") +  # Apply a custom color palette
-  geom_text(stat='count', aes(label=..count..), vjust=-0.5, size=3.5) +  # Add count labels on top of the bars
+  scale_fill_brewer(palette = "Set3") +
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5, size=3.5) +
   labs(x = "Charge Amount", y = "Count", fill = "Charge Amount", title = "Distribution of Customers by Charge Amount") +
-  theme_minimal() +  # Apply a minimalistic theme for clean presentation
+  theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style the title
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
     axis.title.x = element_text(size = 12),
     axis.title.y = element_text(size = 12),
-    legend.position = "right",  # Position the legend on the right
+    legend.position = "right",
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9)
   )
 ```
-Observation3: 
-Charge amount is an ordinal attribute with lowest value being 0 and highest being 9
-The charge amount of 0 has the highest count, and the count decreases with the charge amount.
 
+## Observation3: 
 
+Charge amount is an ordinal attribute with lowest value being 0 and
+highest being 9 The charge amount of 0 has the highest count, and the
+count decreases with the charge amount.\
 Distribution of Churn count across age group
+
 ```{r}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) + 
-  geom_bar(position = "dodge", color = "black") +  # Grouped bar plot with black border
-  scale_fill_manual(values = c("#00AFBB", "#E7B800")) +  # Custom colors for the Churn groups
-  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.3, position = position_dodge(0.9), size = 3.5) +  # Adding count labels
+  geom_bar(position = "dodge", color = "black") + 
+  scale_fill_manual(values = c("#00AFBB", "#E7B800")) +  
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.3, position = position_dodge(0.9), size = 3.5) +
   labs(x = "Age Group", y = "Count", fill = "Churn", title = "Churn Distribution Across Age Groups") +
-  theme_minimal() +  # Apply a minimalistic theme
+  theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold the title
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
     axis.title.x = element_text(size = 12),
     axis.title.y = element_text(size = 12),
-    legend.position = "right",  # Position the legend on the right
+    legend.position = "right",  
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9)
   ) 
 ```
-Observation:
-Customer in the Middle age group(2 and 3) are churned more compared to other age group
 
+## ***Observation 4:*** 
 
-Distribution of Churn count across status 
+Customer in the Middle age group(2 and 3) are churned more compared to
+other age group\
+Distribution of Churn count across status
+
 ```{r}
-# Create a table of counts for Status and Churn
 status_churn_table <- table(customerInfo$Status, customerInfo$Churn)
-
-# Convert the table to a data frame for easier plotting
 status_churn_df <- as.data.frame(status_churn_table)
 colnames(status_churn_df) <- c("Status", "Churn", "Count")
-
-# Plotting the heatmap
 ggplot(status_churn_df, aes(x = factor(Status), y = factor(Churn), fill = Count)) + 
-  geom_tile(color = "white") +  # Create the heatmap tiles with white borders
-  scale_fill_gradient(low = "#FFCCCC", high = "#990000") +  # Use a gradient color scale
+  geom_tile(color = "white") +  
+  scale_fill_gradient(low = "#FFCCCC", high = "#990000") +  
   labs(x = "Status", y = "Churn", fill = "Count", title = "Heatmap of Churn Distribution Across Status") +
-  scale_x_discrete(labels = c("1" = "Active", "2" = "Inactive")) +  # Replace the numeric labels with meaningful ones
-  theme_minimal() +  # Apply a minimalistic theme
+  scale_x_discrete(labels = c("1" = "Active", "2" = "Inactive")) +  
+  theme_minimal() +  
   theme(
-    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold the title
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
     axis.title.x = element_text(size = 12),
     axis.title.y = element_text(size = 12),
-    legend.position = "right",  # Position the legend on the right
+    legend.position = "right",
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9)
   )
 
 
 ```
-Observation:
-Status is ordinal attribute; 1 - Active ; 2 - Inactive
-Inactive customers are more likely to be churned, compared to the Active customers.
 
+## ***Observation 5:*** 
+
+Status is ordinal attribute; 1 - Active ; 2 - Inactive Inactive
+customers are more likely to be churned, compared to the Active
+customers.\
 Pair plot of all features
-```{r}
-ggpairs(customerInfo[,c("Call..Failure", "Complains", "Subscription..Length", "Charge..Amount","Seconds.of.Use","Frequency.of.use","Age.Group", "Status")])
-```
-Observation:
 
-Frequency_of_use and seconds_of_use is strongly correlated.
+```{r}
+ggpairs(
+  customerInfo[,c("Call..Failure", "Complains", "Subscription..Length", "Charge..Amount","Seconds.of.Use","Frequency.of.use","Age.Group", "Status")],
+  upper = list(continuous = wrap("cor", size = 3)), 
+  lower = list(continuous = wrap("smooth", size = 0.3)),  
+  diag = list(continuous = wrap("densityDiag", alpha = 0.5)), 
+  axisLabels = "show" 
+) +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 3),  
+    axis.text.y = element_text(size = 2),  
+    panel.grid.minor = element_blank(),  
+    panel.grid.major = element_line(color = "gray90"), 
+    strip.text = element_text(size = 4.5, face = "bold")
+  )
+
+```
+
+## ***Observation 6:***
+
+Frequency_of_use and seconds_of_use is strongly correlated.\
+
 
 Using correlation matrix to find the correlation
-```{r}
-library(corrplot)
 
-cor <- cor(customerInfo)
-corrplot(cor, method="pie")
+```{r}
+cor_matrix <- cor(customerInfo)
+corrplot(
+  cor_matrix,
+  method = "pie",           
+  type = "upper",           
+  tl.col = "black",         
+  tl.srt = 45,              
+  tl.cex = 0.9,             
+  cl.cex = 0.8,            
+  number.cex = 0.7,         
+  pie.cex = 1.2,          
+  mar = c(0, 0, 1, 0),     
+  diag = FALSE            
+)
 ```
-Observation:
+
+## ***Observation 7:***
  
  There is a strong positive correlation with Frequency_of_use and Seconds_of_use
  There is a positive correlation between complains and customer Churn
@@ -170,18 +245,20 @@ Observation:
 
 Dropping the correlated columns to avoid collinearity
 Dropping Age column, as `Age` and `Age.Group` represent same feature.
+
 ```{r}
 customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
 ```
 
-Scaling Continuous Variable
+### **Scaling Continuous Variable**
 
 ```{r}
 customerInfo_int <- customerInfo[,-c(2,8,9,10,12)]
 customerInfo_int <- data.frame(scale(customerInfo_int))
 ```
 
-Creating factors for Categorical Data
+### **Creating factors for Categorical Data**
+
 ```{r}
 customerInfo$Complains <- factor(customerInfo$Complains)
 customerInfo$Age.Group <- factor(customerInfo$Age.Group)
@@ -192,16 +269,16 @@ customerInfo_scaled <- customerInfo %>%
                   select(c(2,8,9,10,12)) %>%
                   cbind(customerInfo_int)
 ```
- 
 
-Creating Dummy variable for Categorical Data
+### **Creating Dummy variable for Categorical Data**
+
 ```{r}
 sparse_matrix <- model.matrix(Churn ~ ., data = customerInfo_scaled)[,-1]
 customerInfo_final <-  customerInfo_scaled %>% select(c("Churn")) %>% cbind(sparse_matrix)
 
 ```
 
-Split Train and Test Data
+### **Split Train and Test Data**
 
 ```{r}
 target <- "Churn"
@@ -220,15 +297,15 @@ yTest <- dataTest[[target]]
 
 ```
 
+### **Put our testing & training data into two separates Dmatrixs objects**
 
-put our testing & training data into two seperates Dmatrixs objects
 ```{r}
 dtrain <- xgb.DMatrix(data = as.matrix(xTrain), label= yTrain)
 dtest <- xgb.DMatrix(data = as.matrix(xTest), label= yTest)
 ```
 
+## **Logistic regression**
 
-Logistic regression
 ```{r}
 logistic_model <- glm(Churn ~ ., data = dataTrain, family = "binomial")
 logistic_predict_test <- predict(logistic_model , xTest, type = "response")
@@ -237,9 +314,8 @@ predictions_Logistic <- data.frame(actual = yTest,
 confusionMatrix(as.factor(predictions_Logistic$predicted), as.factor(yTest),positive = "1",  mode = "everything")
 ```
 
+### **Running with default params**
 
-
-Running with default params
 ```{r}
 
 default_param<-list(
@@ -255,7 +331,6 @@ default_param<-list(
 xgbcv <- xgb.cv( params = default_param, data = dtrain, nrounds = 500, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
 ```
 
-
 ```{r}
 
 xgb_mod <- xgb.train(data = dtrain, params=default_param, nrounds = 38)
@@ -265,7 +340,8 @@ predictions_def_XGB <- data.frame(actual = yTest,
 confusionMatrix(as.factor(predictions_def_XGB$predicted), as.factor(yTest),positive = "1",  mode = "everything")
 ```
 
-setting up a grid that tunes both these parameters, and also the eta (learning rate).
+### **Setting up a grid that tunes both these parameters, and also the ETA  (learning rate).**
+
 ```{r}
 xgb_grid = expand.grid(
 nrounds = 1000,
@@ -278,14 +354,17 @@ subsample=1
 )
 ```
 
-The next step is to let caret find the best hyperparameter values (using 5 fold cross validation).
+### **The next step is to let caret find the best hyper-parameter values  (using 5 fold cross validation).**
+
 ```{r}
 set.seed(27042018)
 my_control <-trainControl(method="cv", number=5)
 #xgb_caret <- train(x=xTrain, y=yTrain, method='xgbTree', trControl= my_control, tuneGrid=xgb_grid) 
 #xgb_caret$bestTune
 ```
-forming the params based on the best tune
+
+### **Forming the Params based on the best tune**
+
 ```{r}
 
 best_tune_param<-list(
@@ -300,39 +379,68 @@ best_tune_param<-list(
 )
 ```
 
- cross validation to determine the best number of rounds (for the given set of parameters).
+### **Cross validation to determine the best number of rounds  (for the given set of parameters).**
+
 ```{r}
 xgbcv <- xgb.cv( params = best_tune_param, data = dtrain, nrounds = 700, nfold = 5, showsd = T, stratified = T, print_every_n = 40, early_stopping_rounds = 10, maximize = F)
 ```
+
 ```{r}
 #train the model using the best iteration found by cross validation
 xgb_mod <- xgb.train(data = dtrain, params=best_tune_param, nrounds = 352)
 ```
- 
+
 ```{r}
 preds <- predict(xgb_mod, dtest)
 predictions_XGB <- data.frame(actual = yTest,
                           predicted = ifelse(preds > 0.3, 1, 0))
 head(predictions_XGB)
 ```
- 
- 
-Confusion matrix for the predictions
+
+## **Confusion matrix for the predictions**
+
 ```{r}
 confusionMatrix(as.factor(predictions_XGB$predicted), as.factor(yTest),positive = "1", mode = "everything")
 ```
-Plotting the roc curve
+
+### **Plotting the roc curve**
+
 ```{r}
-#
-library(pROC)
-plot.roc(yTest , as.numeric(predictions_XGB$predicted) , print.auc = TRUE , col = 'red' , print.auc.y = 0.7)
-plot.roc(yTest , as.numeric(predictions_def_XGB$predicted) , print.auc = TRUE , col = 'blue' , add = TRUE ,  print.auc.y = 0.6)
-plot.roc(yTest , as.numeric(predictions_Logistic$predicted) , print.auc = TRUE , col = 'black' , add = TRUE ,  print.auc.y = 0.5)
-legend("bottom", c("XgBoost - Fine Tuned", "XGBoost", "Logistic"),
-       lty = c(1,1), lwd = c(2, 2), col = c("red", "blue", "black"), cex = 0.75)
-#roc_score=roc(yTest , as.numeric(predictions_XGB$predicted)) #AUC score
-#plot(roc_score ,main ="ROC curve -- XGBoost ")
+plot.roc(yTest, as.numeric(predictions_XGB$predicted), 
+         print.auc = TRUE, 
+         col = 'red', 
+         lwd = 2, 
+         main = "Enhanced ROC Curves", 
+         legacy.axes = TRUE, 
+         print.auc.y = 0.7, 
+         print.auc.x = 0.6, 
+         print.auc.cex = 1.2)
+plot.roc(yTest, as.numeric(predictions_def_XGB$predicted), 
+         print.auc = TRUE, 
+         col = 'blue', 
+         lwd = 2, 
+         add = TRUE,  
+         print.auc.y = 0.6, 
+         print.auc.x = 0.6, 
+         print.auc.cex = 1.2)
+plot.roc(yTest, as.numeric(predictions_Logistic$predicted), 
+         print.auc = TRUE, 
+         col = 'black', 
+         lwd = 2, 
+         add = TRUE,  
+         print.auc.y = 0.5, 
+         print.auc.x = 0.6, 
+         print.auc.cex = 1.2)
+legend("bottom", 
+       legend = c("XGBoost - Fine Tuned", "XGBoost", "Logistic"),
+       lty = c(1, 1), 
+       lwd = c(2, 2, 2), 
+       col = c("red", "blue", "black"), 
+       cex = 0.9, 
+       box.lty = 0, 
+       inset = 0.05)
 ```
+
 
 Feature Importance
 ```{r}
@@ -379,3 +487,4 @@ ggplot(customerInfo, aes(x = Churn, y = Seconds.of.Use, fill = factor(Churn))) +
  Customers who use for less seconds are likely to be churned.
  Customers who raised Complaints are churned compared to customers with no complaints.
  
+
