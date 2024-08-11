@@ -176,18 +176,18 @@ other age group\
 #### Distribution of Churn count across status
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
-
+status_churn_table <- table(customerInfo$Status, customerInfo$Churn)
+status_churn_df <- as.data.frame(status_churn_table)
+colnames(status_churn_df) <- c("Status", "Churn", "Count")
 status_churn_pie <- status_churn_df %>%
   group_by(Status) %>%
-  mutate(Percentage = Count / sum(Count) * 100,
-         ChurnLabel = ifelse(Churn == 1, "Churned", "Not Churned"),
-         StatusLabel = ifelse(Status == 1, "Active", "Inactive"))
-
-ggplot(status_churn_pie, aes(x = "", y = Percentage, fill = ChurnLabel)) +
+  mutate(Percentage = Count / sum(Count) * 100)
+ggplot(status_churn_pie, aes(x = "", y = Percentage, fill = factor(Churn))) +
   geom_bar(stat = "identity", width = 1, color = "white") +
   coord_polar("y", start = 0) +
-  facet_wrap(~StatusLabel, ncol = 2) +
+  facet_wrap(~Status, ncol = 2, labeller = as_labeller(c(`1` = "Active", `2` = "Inactive"))) +
   labs(x = NULL, y = NULL, fill = "Churn", title = "Pie Chart of Churn Distribution Across Status") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9"), labels = c("Not Churned", "Churned")) +  
   theme_minimal() +  
   theme(
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), 
@@ -200,8 +200,8 @@ ggplot(status_churn_pie, aes(x = "", y = Percentage, fill = ChurnLabel)) +
     panel.grid = element_blank()
   ) +
   geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
-            position = position_stack(vjust = 0.5), size = 3.5) +
-  scale_fill_discrete(labels = c("Churned", "Not Churned")) 
+            position = position_stack(vjust = 0.5), size = 3.5)
+
 ```
 
 #### ***Observation 5:***
