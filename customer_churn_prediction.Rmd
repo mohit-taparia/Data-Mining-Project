@@ -24,6 +24,7 @@ library(GGally)
 library(fastDummies)
 library(corrplot)
 library(pROC)
+library(SHAPforxgboost)
 ```
 
 **The case study references the Telecom customer churn dataset **
@@ -454,12 +455,12 @@ legend("bottom",
 ```
 
 
-Feature Importance
+SHAP Feature Importance
 ```{r}
-#view variable importance plot
-mat <- xgb.importance (feature_names = colnames(xTrain),model = xgb_mod)
-xgb.ggplot.importance(importance_matrix = mat, rel_to_first = TRUE, measure = "Gain")
+shap.plot.summary.wrap1(xgb_mod, as.matrix(xTrain), top_n = 10)
 ```
+
+
 Distribution of Churn count across Complains
 ```{r}
 ggplot(customerInfo, aes(x = Complains, fill = factor(Churn))) + 
