@@ -57,7 +57,7 @@ sum(is.na(customerInfo))
 customerInfo %>% group_by(Churn) %>% summarise(n=n()) %>% arrange(desc(n))
 ```
 
-### Plotting churn count in the dataset.
+#### Plotting churn count in the dataset.
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
@@ -92,7 +92,8 @@ there are more number of churn customers than customers who wont churn
 or vice versa) There is some data imbalance, as the number of churn
 consumers is significantly lower than the number of customers that will
 not churn\
-Count plot of Age Group to see the distribution of customers across Age
+
+#### Count plot of Age Group to see the distribution of customers across Age
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
@@ -120,7 +121,8 @@ ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
 #### ***Observation2:***
 
 There are more customer in the middle age group (2 and 3)\
-Count plot of Age Group to see the distribution of customers across Age
+
+#### Count plot of Age Group to see the distribution of customers across Age
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
@@ -145,7 +147,8 @@ ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
 Charge amount is an ordinal attribute with lowest value being 0 and
 highest being 9 The charge amount of 0 has the highest count, and the
 count decreases with the charge amount.\
-Distribution of Churn count across age group
+
+#### Distribution of Churn count across age group
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) + 
@@ -169,7 +172,8 @@ ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) +
 
 Customer in the Middle age group(2 and 3) are churned more compared to
 other age group\
-Distribution of Churn count across status
+
+#### Distribution of Churn count across status
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 
@@ -203,18 +207,11 @@ ggplot(status_churn_pie, aes(x = "", y = Percentage, fill = ChurnLabel)) +
 #### ***Observation 5:***
 
 Pie Chart Active and Pie Chart Inactive: \
-Pie Chart Active: Represents the proportion of different churn statuses
-for the first category within the Status variable. For example, if
-Status includes "Active" and "Inactive," Pie Chart 1 could represent the
-churn distribution for "Active" customers. \
-Pie Chart Inactive: Represents the proportion of different churn
-statuses for the second category within the Status variable. Following
-the same example, Pie Chart 2 would show the churn distribution for
-"Inactive" customers.\
-Inactive customers are more likely to be churned, compared to the Active
-customers.\
+Pie Chart Active: Churn distribution for "Active" customers. \
+Pie Chart Inactive: Churn distribution for "Inactive" customers.\
+Inactive customers are more likely to be churned, compared to the Active customers.\
 
-Pair plot of all features
+#### Pair plot of all features
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ggpairs(
@@ -238,7 +235,7 @@ ggpairs(
 
 Frequency_of_use and seconds_of_use is strongly correlated.\
 
-Using correlation matrix to find the correlation
+#### Using correlation matrix to find the correlation
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 cor_matrix <- cor(customerInfo)
@@ -263,8 +260,7 @@ There is a strong positive correlation with Frequency_of_use and
 Seconds_of_use There is a positive correlation between complains and
 customer Churn
 
-Dropping the correlated columns to avoid collinearity Dropping Age
-column, as `Age` and `Age.Group` represent same feature.
+#### Dropping the correlated columns to avoid collinearity Dropping Age column, as `Age` and `Age.Group` represent same feature.
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
