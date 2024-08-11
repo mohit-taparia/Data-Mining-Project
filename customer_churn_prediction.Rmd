@@ -13,7 +13,6 @@ editor_options:
     wrap: 72
 ---
 
-
 ```{r message=FALSE}
 library(readxl)
 library(dplyr)
@@ -27,7 +26,7 @@ library(pROC)
 library(SHAPforxgboost)
 ```
 
-**The case study references the Telecom customer churn dataset **
+**The case study references the Telecom customer churn dataset**
 <https://archive.ics.uci.edu/dataset/563/iranian+churn+dataset>
 
 The **read_excel()** method loads the dataset stored in the Excel
@@ -86,7 +85,7 @@ ggplot(customerInfo, aes(Churn, fill = factor(Churn))) +
 
 ```
 
-## ***Observation1:*** 
+#### ***Observation1:***
 
 Using this Count plot, target variable is checked for data imbalance (if
 there are more number of churn customers than customers who wont churn
@@ -118,7 +117,7 @@ ggplot(customerInfo, aes(x = Age.Group, fill = factor(Age.Group))) +
   )
 ```
 
-### ***Observation2:*** 
+#### ***Observation2:***
 
 There are more customer in the middle age group (2 and 3)\
 Count plot of Age Group to see the distribution of customers across Age
@@ -141,7 +140,7 @@ ggplot(customerInfo, aes(x = Charge..Amount, fill = factor(Charge..Amount))) +
   )
 ```
 
-## Observation3: 
+#### ***Observation3:***
 
 Charge amount is an ordinal attribute with lowest value being 0 and
 highest being 9 The charge amount of 0 has the highest count, and the
@@ -166,13 +165,14 @@ ggplot(customerInfo, aes(x = Age.Group, fill = factor(Churn))) +
   ) 
 ```
 
-## ***Observation 4:*** 
+#### ***Observation 4:***
 
 Customer in the Middle age group(2 and 3) are churned more compared to
 other age group\
 Distribution of Churn count across status
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
+
 status_churn_pie <- status_churn_df %>%
   group_by(Status) %>%
   mutate(Percentage = Count / sum(Count) * 100,
@@ -197,16 +197,22 @@ ggplot(status_churn_pie, aes(x = "", y = Percentage, fill = ChurnLabel)) +
   ) +
   geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
             position = position_stack(vjust = 0.5), size = 3.5) +
-  scale_fill_discrete(labels = c("Churned", "Not Churned"))
- 
+  scale_fill_discrete(labels = c("Churned", "Not Churned")) 
 ```
 
-## ***Observation 5:*** 
+#### ***Observation 5:***
 
-Status is ordinal attribute; 1 - Active ; 2 - Inactive \
+Pie Chart Active and Pie Chart Inactive: \
+Pie Chart Active: Represents the proportion of different churn statuses
+for the first category within the Status variable. For example, if
+Status includes "Active" and "Inactive," Pie Chart 1 could represent the
+churn distribution for "Active" customers. \
+Pie Chart Inactive: Represents the proportion of different churn
+statuses for the second category within the Status variable. Following
+the same example, Pie Chart 2 would show the churn distribution for
+"Inactive" customers.\
 Inactive customers are more likely to be churned, compared to the Active
 customers.\
-
 
 Pair plot of all features
 
@@ -228,10 +234,9 @@ ggpairs(
 
 ```
 
-## ***Observation 6:***
+#### ***Observation 6:***
 
 Frequency_of_use and seconds_of_use is strongly correlated.\
-
 
 Using correlation matrix to find the correlation
 
@@ -252,14 +257,14 @@ corrplot(
 )
 ```
 
-## ***Observation 7:***
- 
- There is a strong positive correlation with Frequency_of_use and Seconds_of_use
- There is a positive correlation between complains and customer Churn
- 
+#### ***Observation 7:***
 
-Dropping the correlated columns to avoid collinearity
-Dropping Age column, as `Age` and `Age.Group` represent same feature.
+There is a strong positive correlation with Frequency_of_use and
+Seconds_of_use There is a positive correlation between complains and
+customer Churn
+
+Dropping the correlated columns to avoid collinearity Dropping Age
+column, as `Age` and `Age.Group` represent same feature.
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 customerInfo <- customerInfo %>% select(-c(Frequency.of.use,Age))
@@ -297,7 +302,6 @@ customerInfo_final <-  customerInfo_scaled %>% select(c("Churn")) %>% cbind(spar
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 target <- "Churn"
-#customerInfo_final$Churn <- factor(customerInfo_final$Churn, levels = c(0,1))
 features <- setdiff(names(customerInfo_final), target)
 set.seed(123)
 trainIndex <- createDataPartition(customerInfo_final[[target]], p = 0.8, 
@@ -454,14 +458,15 @@ legend("bottom",
        inset = 0.05)
 ```
 
+## ***Feature Importance***
 
 SHAP Feature Importance
 ```{r}
 shap.plot.summary.wrap1(xgb_mod, as.matrix(xTrain), top_n = 10)
 ```
 
+### Distribution of Churn count across Complains
 
-Distribution of Churn count across Complains
 ```{r}
 ggplot(customerInfo, aes(x = Complains, fill = factor(Churn))) + 
   geom_bar(position = "dodge", color = "black") +  # Grouped bar plot with black border
@@ -480,7 +485,8 @@ ggplot(customerInfo, aes(x = Complains, fill = factor(Churn))) +
   ) 
 ```
 
-Distribution of Churn count across Seconds.of.use
+### Distribution of Churn count across Seconds.of.use
+
 ```{r}
 ggplot(customerInfo, aes(x = Churn, y = Seconds.of.Use, fill = factor(Churn))) + 
   geom_boxplot() +  
@@ -496,9 +502,10 @@ ggplot(customerInfo, aes(x = Churn, y = Seconds.of.Use, fill = factor(Churn))) +
     legend.text = element_text(size = 9)
   ) 
 ```
- Final Observation from Model
- Inactive Customers (Status) are most likely to be churned. 
- Customers who use for less seconds are likely to be churned.
- Customers who raised Complaints are churned compared to customers with no complaints.
- 
 
+## ***Final Observation*** 
+
+From Model Inactive Customers (Status) are most likely to be churned.
+Customers who use for less seconds are likely to be churned. Customers
+who raised Complaints are churned compared to customers with no
+complaints.
