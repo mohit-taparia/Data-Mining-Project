@@ -3,19 +3,19 @@ Data Mining Project for INFO-523
 # Telecom Customer Churn Analysis Using XGBoost
 
 ### Background
-This presentation explores the application of the XGBoost algorithm in the context of Telecom customer churn analysis. XGBoost, or eXtreme Gradient Boosting, is an advanced machine learning algorithm that falls under ensemble learning. It is known for its efficiency and scalability, making it an ideal choice for analyzing large datasets in both regression and classification tasks.
+XGBoost (eXtreme Gradient Boosting),is a powerful and advanced machine learning algorithm. As part of the ensemble learning technique, XGBoost is recognized for its efficiency and scalability, making it an excellent choice for analyzing large datasets in both regression and classification tasks.
 
 ### Relation to INFO 523 Topics
-The project closely relates to topics covered in INFO 523, such as supervised learning, ensemble learning techniques, and data preprocessing. XGBoost exemplifies the practical application of these concepts, particularly in handling real-world datasets with missing values, feature scaling, and cross-validation methods. The use of XGBoost in this project builds on the principles of data mining, demonstrating the effectiveness of gradient boosting in improving model performance.
+XGBoost is closely related to data mining as it is a powerful tool used within the data mining process. It is frequently used to build predictive models for both classification and regression tasks. Additionally, XGBoost helps identify significant features that impact outcomes by providing feature importance scores. It excels in processing complex datasets by handling missing values and noisy data, and is robust to overfitting, which is crucial for creating reliable models. By employing ensemble techniques, specifically gradient boosting, XGBoost aligns with data mining strategies that combine multiple models to enhance performance and accuracy.
 
 ### Real-World Applications
-XGBoost has significant real-world applications, particularly in industries where large datasets are common. In this case study, XGBoost is applied to a Telecom customer churn dataset to predict which customers are likely to leave the service. The model’s ability to handle missing data, perform feature importance analysis, and improve prediction accuracy makes it a valuable tool in customer retention strategies and decision-making processes.
+XGBoost has significant real-world applications, particularly in the areas of regression and classification. This algorithm could be used in various industries like Finance - Credit Scoring, Healthcare - prediction of disease, Marketing - customer segmentation, Sale Forecasting, Recommendation Systems. In this case study, XGBoost is applied to a Telecom customer churn dataset to predict the customer churn. The model’s ability to handle large dataset and improved model performance makes it a go-to choice for many industries.
 
-### Worked Example
+### Case Study
 The project includes a detailed implementation of the XGBoost algorithm on the Telecom customer churn dataset. The process involves several key steps:
 - **Data Preprocessing:** Handling missing data, performing one-hot encoding, removing collinearity, and scaling features.
 - **Model Training:** Using cross-validation to train the model and prevent overfitting.
-- **Evaluation:** Comparing the XGBoost model’s performance with other algorithms, demonstrating a significant increase in accuracy and F1 score.
+- **Evaluation:** Model performance is evaluated using Logloss metric. Comparing the XGBoost model’s performance with Logistic Regression algorithms, demonstrates a significant increase in accuracy and F1 score through XgBoost.
 - **Feature Importance Analysis:** Utilizing SHAP values to identify the most important features influencing customer churn, such as seconds of use, call failures, and customer complaints.
 
 ### Results
@@ -31,5 +31,5 @@ The analysis of the Telecom customer churn dataset using XGBoost yielded several
 
 - **Churn Distribution:** The analysis confirmed that churn is not evenly distributed across all customer segments. Certain groups, such as those with less usage or complaints, are at a higher risk, providing valuable insights for targeted retention strategies.
 
-### Conclusions
-XGBoost proves to be a powerful and versatile machine learning algorithm, particularly suited for complex data analysis tasks. Its ability to efficiently handle large datasets, coupled with features like regularization, sparsity awareness, and parallel processing, makes it an essential tool for data scientists. In the context of this project, XGBoost significantly improves the accuracy and reliability of churn predictions, offering valuable insights that can inform customer retention strategies.
+### Conclusion
+The algorithm found various key relationships and patterns in the Case Study. In conclusion, XGBoost proves to be a powerful and versatile machine learning algorithm, particularly suited for complex data analysis tasks. Its ability to efficiently handle large datasets, coupled with features like regularization, sparsity awareness, and parallel processing, makes it an essential tool for data scientists. In the context of the project, XGBoost significantly improves the accuracy and reliability of churn predictions, offering valuable insights that can used to suggest customer retention strategies.
